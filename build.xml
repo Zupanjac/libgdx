@@ -128,7 +128,7 @@
 		<path id="classpath">
 			<pathelement location="${distDir}/gdx.jar"/>
 		</path>
-        <ant antfile="fetch.xml">
+        <ant antfile="fetch.xml" >
             <target name="fetch-robovm"/>
         </ant>
 		<ant antfile="../../build-template.xml" dir="backends/gdx-backend-robovm">

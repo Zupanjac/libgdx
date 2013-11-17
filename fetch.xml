@@ -5,10 +5,10 @@
     
     <target name="fetch-robovm">
         <mkdir dir="backends/gdx-backend-robovm/libs/"/>
-        <get src="${robovm}/robovm-cacerts-full.jar" dest="backends/gdx-backend-robovm/libs/"/>
-        <get src="${robovm}/robovm-cocoatouch.jar" dest="backends/gdx-backend-robovm/libs/"/>
-        <get src="${robovm}/robovm-objc.jar" dest="backends/gdx-backend-robovm/libs/"/>
-        <get src="${robovm}/robovm-rt.jar" dest="backends/gdx-backend-robovm/libs/"/>
+        <get src="${robovm}/robovm-cacerts-full.jar" dest="backends/gdx-backend-robovm/libs/robovm-cacerts-full.jar"  verbose="true"/>
+        <get src="${robovm}/robovm-cocoatouch.jar" dest="backends/gdx-backend-robovm/libs/robovm-cocoatouch.jar"/>
+        <get src="${robovm}/robovm-objc.jar" dest="backends/gdx-backend-robovm/libs/robovm-objc.jar"/>
+        <get src="${robovm}/robovm-rt.jar" dest="backends/gdx-backend-robovm/libs/robovm-rt.jar"/>
     </target>
     
 	<target name="fetch">		
