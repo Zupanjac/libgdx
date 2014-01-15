@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
+
 package com.badlogic.gdx.scenes.scene2d.ui;
 
 import com.esotericsoftware.tablelayout.Cell;
@@ -60,8 +61,9 @@ public class ImageTextButton extends Button {
 		label.setAlignment(Align.center);
 		add(label);
 
-		setWidth(getPrefWidth());
-		setHeight(getPrefHeight());
+		setStyle(style);
+
+		setSize(getPrefWidth(), getPrefHeight());
 	}
 
 	public void setStyle (ButtonStyle style) {

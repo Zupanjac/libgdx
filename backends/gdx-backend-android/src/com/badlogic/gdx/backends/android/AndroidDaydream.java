@@ -17,6 +17,7 @@
 package com.badlogic.gdx.backends.android;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 
 import android.app.Activity;
 import android.content.Context;
@@ -24,12 +25,11 @@ import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Handler;
-import android.os.PowerManager;
-import android.os.PowerManager.WakeLock;
 import android.service.dreams.DreamService;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 
 import com.badlogic.gdx.Application;
@@ -72,7 +72,6 @@ public class AndroidDaydream extends DreamService implements Application {
 	protected final Array<Runnable> runnables = new Array<Runnable>();
 	protected final Array<Runnable> executedRunnables = new Array<Runnable>();
 	protected final Array<LifecycleListener> lifecycleListeners = new Array<LifecycleListener>();
-	protected WakeLock wakeLock = null;
 	protected int logLevel = LOG_INFO;
 
 	/** This method has to be called in the Activity#onCreate(Bundle) method. It sets up all the things necessary to get input,
@@ -119,7 +118,7 @@ public class AndroidDaydream extends DreamService implements Application {
 		setFullscreen(true);
 
 		setContentView(graphics.getView(), createLayoutParams());
-		createWakeLock(config);
+		createWakeLock(config.useWakelock);
 		hideStatusBar(config);
 	}
 
@@ -130,10 +129,9 @@ public class AndroidDaydream extends DreamService implements Application {
 		return layoutParams;
 	}
 
-	protected void createWakeLock (AndroidApplicationConfiguration config) {
-		if (config.useWakelock) {
-			PowerManager powerManager = (PowerManager)getSystemService(Context.POWER_SERVICE);
-			wakeLock = powerManager.newWakeLock(PowerManager.FULL_WAKE_LOCK, "libgdx wakelock");
+	protected void createWakeLock (boolean use) {
+		if (use) {
+			getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		}
 	}
 
@@ -198,28 +196,25 @@ public class AndroidDaydream extends DreamService implements Application {
 		Gdx.graphics = this.getGraphics();
 		Gdx.net = this.getNet();
 
-		createWakeLock(config);
+		createWakeLock(config.useWakelock);
 		hideStatusBar(config);
 		return graphics.getView();
 	}
 
 	@Override
 	public void onDreamingStopped () {
-		if (wakeLock != null) wakeLock.release();
 		boolean isContinuous = graphics.isContinuousRendering();
 		graphics.setContinuousRendering(true);
 		graphics.pause();
 
 		input.unregisterSensorListeners();
-		// erase pointer ids. this sucks donkeyballs...
-		int[] realId = input.realId;
-		for (int i = 0; i < realId.length; i++)
-			realId[i] = -1;
-		// erase touched state. this also sucks donkeyballs...
-		boolean[] touched = input.touched;
-		for (int i = 0; i < touched.length; i++)
-			touched[i] = false;
 
+		int[] realId = input.realId;
+		// erase pointer ids. this sucks donkeyballs...
+		Arrays.fill(realId, -1);
+		boolean[] touched = input.touched;
+		// erase touched state. this also sucks donkeyballs...
+		Arrays.fill(touched, false);
 		graphics.clearManagedCaches();
 		graphics.destroy();
 		graphics.setContinuousRendering(isContinuous);
@@ -235,7 +230,6 @@ public class AndroidDaydream extends DreamService implements Application {
 
 	@Override
 	public void onDreamingStarted () {
-		if (wakeLock != null) wakeLock.acquire();
 		Gdx.app = this;
 		Gdx.input = this.getInput();
 		Gdx.audio = this.getAudio();
@@ -394,7 +388,7 @@ public class AndroidDaydream extends DreamService implements Application {
 	}
 
 	@Override
-	public int getLogLevel() {
+	public int getLogLevel () {
 		return logLevel;
 	}
 

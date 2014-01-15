@@ -16,11 +16,8 @@
 
 package com.badlogic.gdx.net;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
@@ -37,7 +34,6 @@ import com.badlogic.gdx.Net.HttpResponse;
 import com.badlogic.gdx.Net.HttpResponseListener;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.StreamUtils;
-import com.badlogic.gdx.utils.StringBuilder;
 
 /** Implements part of the {@link Net} API using {@link HttpURLConnection}, to be easily reused between the Android and Desktop
  * backends.
@@ -47,16 +43,9 @@ public class NetJavaImpl {
 	static class HttpClientResponse implements HttpResponse {
 		private HttpURLConnection connection;
 		private HttpStatus status;
-		private InputStream inputStream;
 
 		public HttpClientResponse (HttpURLConnection connection) throws IOException {
 			this.connection = connection;
-			try {
-				this.inputStream = connection.getInputStream();
-			} catch (IOException e) {
-				this.inputStream = connection.getErrorStream();
-			}
-
 			try {
 				this.status = new HttpStatus(connection.getResponseCode());
 			} catch (IOException e) {
@@ -66,37 +55,31 @@ public class NetJavaImpl {
 
 		@Override
 		public byte[] getResult () {
+			InputStream input = getInputStream();
 			try {
-				return StreamUtils.copyStreamToByteArray(inputStream, connection.getContentLength());
+				return StreamUtils.copyStreamToByteArray(input, connection.getContentLength());
 			} catch (IOException e) {
 				return StreamUtils.EMPTY_BYTES;
+			} finally {
+				StreamUtils.closeQuietly(input);
 			}
 		}
 
 		@Override
 		public String getResultAsString () {
-			BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+			InputStream input = getInputStream();
 			try {
-				int approxStringLength = connection.getContentLength();
-				StringBuilder b;
-				if (approxStringLength > 0)
-					b = new StringBuilder(approxStringLength);
-				else
-					b = new StringBuilder();
-				String line;
-				while ((line = reader.readLine()) != null)
-					b.append(line);
-				return b.toString();
+				return StreamUtils.copyStreamToString(input, connection.getContentLength());
 			} catch (IOException e) {
 				return "";
 			} finally {
-				StreamUtils.closeQuietly(reader);
+				StreamUtils.closeQuietly(input);
 			}
 		}
 
 		@Override
 		public InputStream getResultAsStream () {
-			return inputStream;
+			return getInputStream();
 		}
 
 		@Override
@@ -112,6 +95,14 @@ public class NetJavaImpl {
 		@Override
 		public Map<String, List<String>> getHeaders () {
 			return connection.getHeaderFields();
+		}
+
+		private InputStream getInputStream () {
+			try {
+				return connection.getInputStream();
+			} catch (IOException e) {
+				return connection.getErrorStream();
+			}
 		}
 	}
 
@@ -129,7 +120,6 @@ public class NetJavaImpl {
 
 		try {
 			final String method = httpRequest.getMethod();
-
 			URL url;
 
 			if (method.equalsIgnoreCase(HttpMethods.GET)) {
@@ -160,23 +150,27 @@ public class NetJavaImpl {
 				@Override
 				public void run () {
 					try {
-
 						// Set the content for POST and PUT (GET has the information embedded in the URL)
 						if (doingOutPut) {
 							// we probably need to use the content as stream here instead of using it as a string.
 							String contentAsString = httpRequest.getContent();
-							InputStream contentAsStream = httpRequest.getContentStream();
-
-							OutputStream outputStream = connection.getOutputStream();
 							if (contentAsString != null) {
-								OutputStreamWriter writer = new OutputStreamWriter(outputStream);
-								writer.write(contentAsString);
-								writer.flush();
-								writer.close();
-							} else if (contentAsStream != null) {
-								StreamUtils.copyStream(contentAsStream, outputStream);
-								outputStream.flush();
-								outputStream.close();
+								OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
+								try {
+									writer.write(contentAsString);
+								} finally {
+									StreamUtils.closeQuietly(writer);
+								}
+							} else {
+								InputStream contentAsStream = httpRequest.getContentStream();
+								if (contentAsStream != null) {
+									OutputStream os = connection.getOutputStream();
+									try {
+										StreamUtils.copyStream(contentAsStream, os);
+									} finally {
+										StreamUtils.closeQuietly(os);
+									}
+								}
 							}
 						}
 
