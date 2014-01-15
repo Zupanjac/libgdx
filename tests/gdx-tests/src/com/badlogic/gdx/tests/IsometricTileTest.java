@@ -50,6 +50,7 @@ public class IsometricTileTest extends GdxTest {
 
 	@Override
 	public void create () {
+		//Test
 		cam = new OrthographicCamera(480, 320);
 		camController = new OrthoCamController(cam);
 		Gdx.input.setInputProcessor(camController);
